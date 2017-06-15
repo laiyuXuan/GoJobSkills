@@ -67,22 +67,22 @@ func getTotalPage(body string) int  {
 	return atoi;
 }
 
-func GetPositionIds(keyword string) []int {
+func GetPositionIds(keyword string) (positionIds []int) {
 	values := &url.Values{}
 	values.Add("kd", keyword)
-	positionIds := make([]int, 900)
+	positionIds = make([]int, 900)
 	for pageNum := 1; pageNum <= 5; pageNum ++ {
 		values.Add("pn", strconv.Itoa(pageNum))
 		resp, err := http.PostForm(positionUrl, *values)
 		if err != nil {
 			logger.Println("GetPositionIds error, ", err)
-			return nil
+			return
 		}
 
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			logger.Println("ioutil.ReadAll error, ", err)
-			return nil
+			return
 		}
 
 		positionResponse := &PositionResponse{}
@@ -90,7 +90,7 @@ func GetPositionIds(keyword string) []int {
 
 		if err != nil {
 			logger.Println("ioutil.ReadAll error, ", err)
-			return nil
+			return
 		}
 
 		subPositionIds := make([]int, 15)
@@ -102,7 +102,7 @@ func GetPositionIds(keyword string) []int {
 		positionIds = append(positionIds, subPositionIds...)
 	}
 
-	return positionIds
+	return
 }
 
 
