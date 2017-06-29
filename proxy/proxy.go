@@ -10,6 +10,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"regexp"
 	"strconv"
+	"GoJobSkills/constant"
 )
 
 var logger = log.GetLogger()
@@ -37,7 +38,7 @@ func CheckIP(ip *model.IP) bool {
 }
 
 func FillProxyPool() {
-	client, err := redis.Dial("tcp", "127.0.0.1:6379")
+	client, err := redis.Dial("tcp", constant.REDIS_SERVER)
 	defer client.Close()
 
 	if err != nil {
