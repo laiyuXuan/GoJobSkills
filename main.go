@@ -1,8 +1,18 @@
-package GoJobSkills
+package main
 
-import "GoJobSkills/crawler"
+import (
+	"net/http"
+	"GoJobSkills/controller"
+	"log"
+	"GoJobSkills/job"
+)
 
 func main() {
-	centipede := crawler.NewCentipede()
-	centipede.Run();
+	go job.Register()
+	http.HandleFunc("/", controller.HelloWorld)
+	err := http.ListenAndServe(":8080", nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }

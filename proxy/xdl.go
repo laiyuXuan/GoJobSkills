@@ -12,6 +12,8 @@ import (
 
 // XDL get ip from xdaili.cn
 func XDL() (result []*model.IP) {
+	log.Println("start retrieving proxies from XDL...")
+
 	pollURL := "http://www.xdaili.cn/freeproxy.html"
 
 	fetcher, err := phantomjs.NewFetcher(2015, nil)

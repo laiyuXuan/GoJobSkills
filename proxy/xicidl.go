@@ -11,6 +11,8 @@ import (
 
 // Xici get ip from xicidaili.com
 func Xici() (result []*model.IP) {
+	log.Println("start retrieving proxies from Xici...")
+
 	pollURL := "http://www.xicidaili.com/nn/"
 
 	fetcher, err := phantomjs.NewFetcher(2017, nil)

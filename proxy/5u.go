@@ -9,8 +9,12 @@ import (
 
 )
 
+
+
 // Data5u get ip from data5u.com
 func Data5u() (results []*model.IP) {
+	log.Println("start retrieving proxies from Data5U...")
+
 	pollURL := "http://www.data5u.com/free/index.shtml"
 	resp, _, errs := gorequest.New().Get(pollURL).End()
 	if errs != nil {
@@ -35,9 +39,6 @@ func Data5u() (results []*model.IP) {
 		results = append(results, ip)
 	})
 	log.Println("Data5u done.")
-	for _, result := range results {
-		log.Println(result.Data)
-	}
 
 	return
 }

@@ -7,10 +7,9 @@ import (
 	"GoJobSkills/model"
 	"fmt"
 	"time"
-	"testing"
 	"github.com/garyburd/redigo/redis"
 	"regexp"
-	"golang.org/x/net/proxy"
+	"strconv"
 )
 
 var logger = log.GetLogger()
@@ -26,8 +25,9 @@ func GetRandomProxy() (ip string) {
 func CheckIP(ip *model.IP) bool {
 	pollURL := "http://httpbin.org/get"
 	resp, _, errs := gorequest.New().Proxy(ip.Data).Get(pollURL).Timeout(time.Second * 20).End()
-	fmt.Println(resp)
+	logger.Println("proxy" + ip.Data + "checked, result" + strconv.Itoa(resp.StatusCode))
 	if errs != nil {
+		logger.Println(errs)
 		return false
 	}
 	if resp.StatusCode == 200 {
@@ -36,7 +36,7 @@ func CheckIP(ip *model.IP) bool {
 	return false
 }
 
-func FillProxyPool(t *testing.T) {
+func FillProxyPool() {
 	client, err := redis.Dial("tcp", "127.0.0.1:6379")
 	defer client.Close()
 
@@ -47,23 +47,36 @@ func FillProxyPool(t *testing.T) {
 
 	compile := regexp.MustCompile(ipRx)
 
-	results := Data5u()
-	for idx, result := range results {
-		fmt.Println(result.Data)
+	results := getAllProxies()
+	logger.Printf("%d proxies obtained", len(results))
+
+	ips := make([]string, 0)
+	for _, result := range results {
 		if !compile.MatchString(result.Data){
 			continue
 		}
 		if !CheckIP(result){
 			continue
 		}
-		fmt.Println(idx)
-		client.Do("SADD", "proxy_pool", result.Data)
+		ips = append(ips, result.Data)
 	}
+	logger.Printf("%d proxies are valid, saving to redis", len(ips))
+
+	for _, ip := range ips{
+		client.Do("SADD", "proxy_pool", ip)
+	}
+	size, err := redis.Int(client.Do("SCARD", "proxy_pool"))
+	if err != nil {
+		logger.Println(err)
+	}
+	logger.Printf("current size of proxy pool is %d", size)
 }
 
 func getAllProxies()  (results []*model.IP){
 	results = append(results, Data5u()...)
-
+	results = append(results, GBJ()...)
+	results = append(results, Xici()...)
+	results = append(results, XDL()...)
 
 	return
 }

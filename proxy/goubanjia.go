@@ -13,6 +13,8 @@ import (
 
 // GBJ get ip from goubanjia.com
 func GBJ() (result []*model.IP) {
+	log.Println("start retrieving proxies from goubanjia...")
+
 	pollURL := "http://www.goubanjia.com/free/gngn/index"
 	for i := 1; i <= 10; i++ {
 		resp, _, errs := gorequest.New().Get(pollURL + strconv.Itoa(i) + ".shtml").End()

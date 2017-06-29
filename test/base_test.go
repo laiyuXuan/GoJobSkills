@@ -358,3 +358,21 @@ func TestProxySources(t *testing.T) {
 		fmt.Println(result.Data)
 	}
 }
+
+func TestArray(t *testing.T) {
+	args := make([]string, 0)
+	args = append(args, "set_test_key")
+	args = append(args, "1")
+	args = append(args, "2")
+	args = append(args, "3")
+
+	client, err := redis.Dial("tcp", "127.0.0.1:6379")
+	defer client.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	client.Do("SADD", args...)
+}
