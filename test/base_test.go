@@ -344,3 +344,17 @@ func TestTicker(t *testing.T) {
 	value := <- ch
 	fmt.Println("value =", value)
 }
+
+func TestProxySources(t *testing.T) {
+	//fmt.Println(proxy.IP66()) bad
+	//results := proxy.GBJ() good
+	//results := proxy.IP181() bad
+	//results := proxy.KDL() empty
+	//results := proxy.PLP() bad
+	//results := proxy.XDL() good
+	//results := proxy.Xici() good
+	results := proxy.YDL() // bad
+	for _, result := range results {
+		fmt.Println(result.Data)
+	}
+}
