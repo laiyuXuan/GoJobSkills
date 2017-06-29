@@ -188,7 +188,7 @@ func TestJianShuLink(t *testing.T) {
 	}
 
 
-		hrefs := make([]string, 0)
+	hrefs := make([]string, 0)
 	totalArticleNum := 1000
 	timeStamp := time.Now().Unix()
 	fmt.Println("using timeStamp :", timeStamp)
