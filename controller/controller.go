@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"fmt"
 	"strings"
-	"GoJobSkills/log"
+	"goJobSkills/log"
+	"goJobSkills/website/jianshu"
 )
 
 var logger = log.GetLogger()
@@ -20,5 +21,10 @@ func HelloWorld(w http.ResponseWriter, r *http.Request) {
 		logger.Println("val:", strings.Join(v, ""))
 	}
 	fmt.Fprintf(w, "Hello Go!") 
+}
 
+func JianShu(w http.ResponseWriter, r *http.Request) {
+	go jianshu.GetArticleLinks()
+
+	fmt.Fprintf(w, "OK!")
 }
