@@ -6,7 +6,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/parnurzeal/gorequest"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 // YDL get ip from youdaili.net

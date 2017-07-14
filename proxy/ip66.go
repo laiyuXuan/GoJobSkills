@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/parnurzeal/gorequest"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 // IP66 get ip from 66ip.cn

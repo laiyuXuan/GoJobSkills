@@ -7,7 +7,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/nladuo/go-phantomjs-fetcher"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 // XDL get ip from xdaili.cn

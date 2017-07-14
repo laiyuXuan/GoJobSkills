@@ -2,17 +2,28 @@ package main
 
 import (
 	"net/http"
-	"GoJobSkills/controller"
+	"goJobSkills/controller"
 	"log"
-	"GoJobSkills/job"
+	"goJobSkills/job"
+	"goJobSkills/client"
 )
 
 func main() {
-	go job.Register()
-	http.HandleFunc("/", controller.HelloWorld)
+	initialize()
 	err := http.ListenAndServe(":8080", nil)
 
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func initialize() {
+	go job.Register()
+	addHandler()
+	client.Init()
+}
+
+func addHandler()  {
+	http.HandleFunc("/", controller.HelloWorld)
+	http.HandleFunc("/spider/jianshu", controller.JianShu)
 }

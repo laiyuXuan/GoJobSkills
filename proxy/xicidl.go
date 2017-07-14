@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/nladuo/go-phantomjs-fetcher"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 // Xici get ip from xicidaili.com

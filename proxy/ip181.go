@@ -7,7 +7,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/parnurzeal/gorequest"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 // IP181 get ip from ip181.com

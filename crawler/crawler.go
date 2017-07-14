@@ -3,7 +3,7 @@ package crawler
 import (
 	"github.com/hu17889/go_spider/core/spider"
 	"github.com/hu17889/go_spider/core/pipeline"
-	"GoJobSkills/website/lagou"
+	"goJobSkills/website/lagou"
 	"github.com/hu17889/go_spider/core/common/request"
 )
 

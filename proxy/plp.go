@@ -7,7 +7,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/parnurzeal/gorequest"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 //PLP get ip from proxylistplus.com

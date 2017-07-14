@@ -4,7 +4,7 @@ import (
 	"log"
 	"github.com/PuerkitoBio/goquery"
 	"strconv"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 	"github.com/parnurzeal/gorequest"
 
 )

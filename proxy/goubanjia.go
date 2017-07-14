@@ -8,7 +8,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/parnurzeal/gorequest"
-	"GoJobSkills/model"
+	"goJobSkills/model"
 )
 
 // GBJ get ip from goubanjia.com

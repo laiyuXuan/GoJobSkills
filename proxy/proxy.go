@@ -1,16 +1,15 @@
 package proxy
 
 import (
-	"GoJobSkills/log"
+	"goJobSkills/log"
 	"math/rand"
 	"github.com/parnurzeal/gorequest"
-	"GoJobSkills/model"
-	"fmt"
+	"goJobSkills/model"
 	"time"
 	"github.com/garyburd/redigo/redis"
 	"regexp"
 	"strconv"
-	"GoJobSkills/constant"
+	"goJobSkills/client"
 )
 
 var logger = log.GetLogger()
@@ -38,13 +37,9 @@ func CheckIP(ip *model.IP) bool {
 }
 
 func FillProxyPool() {
-	client, err := redis.Dial("tcp", constant.REDIS_SERVER)
-	defer client.Close()
+	conn := client.REDIS.Get()
+	defer conn.Close()
 
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
 	compile := regexp.MustCompile(ipRx)
 
@@ -64,9 +59,9 @@ func FillProxyPool() {
 	logger.Printf("%d proxies are valid, saving to redis", len(ips))
 
 	for _, ip := range ips{
-		client.Do("SADD", "proxy_pool", ip)
+		conn.Do("SADD", "proxy_pool", ip)
 	}
-	size, err := redis.Int(client.Do("SCARD", "proxy_pool"))
+	size, err := redis.Int(conn.Do("SCARD", "proxy_pool"))
 	if err != nil {
 		logger.Println(err)
 	}
@@ -80,4 +75,32 @@ func getAllProxies()  (results []*model.IP){
 	results = append(results, XDL()...)
 
 	return
+}
+
+func CheckAvailablity() {
+	conn := client.REDIS.Get()
+	defer conn.Close()
+
+	proxies, err := redis.Strings(conn.Do("SMEMBERS", "proxy_pool"))
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	if len(proxies) == 0{
+		logger.Println("no proxy in the pool")
+		return
+	}
+	ip := model.NewIP()
+	unavailables := make([]string, 0)
+	for _, proxy := range proxies{
+		ip.Data = proxy
+		if !CheckIP(ip) {
+			logger.Println("one unavailable found" + proxy)
+			unavailables = append(unavailables, proxy)
+		}
+	}
+	logger.Println("total unavailable size is %d", len(unavailables))
+	for _, un := range unavailables {
+		conn.Do("SREM", "proxy_pool", un)
+	}
 }

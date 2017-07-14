@@ -2,16 +2,13 @@ package lagou
 
 import (
 	"github.com/hu17889/go_spider/core/common/page"
-	"log"
-	"os"
-	"runtime"
-	"bytes"
 	"regexp"
 	"strconv"
-	"net/http"
-	"net/url"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/parnurzeal/gorequest"
+	"goJobSkills/proxy"
+	"goJobSkills/log"
 )
 
 const (
@@ -19,7 +16,7 @@ const (
 	positionUrl = "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
 )
 
-var logger = getLogger()
+var logger = log.GetLogger()
 
 
 
@@ -35,18 +32,6 @@ func (processor *LaGouPageProcessor) Process(p *page.Page) {
 
 func (processor *LaGouPageProcessor) Finish()  {
 
-}
-
-/**
- get log
- */
-func getLogger() *log.Logger{
-	_, file, _, _ := runtime.Caller(0);
-	var buffer bytes.Buffer
-	buffer.WriteString("[")
-	buffer.WriteString(file)
-	buffer.WriteString("] ->>>")
-	return log.New(os.Stdout, buffer.String(), log.LstdFlags)
 }
 
 /**
@@ -68,14 +53,15 @@ func getTotalPage(body string) int  {
 }
 
 func GetPositionIds(keyword string) (positionIds []int) {
-	values := &url.Values{}
-	values.Add("kd", keyword)
+	params := "kd=" + keyword
 	positionIds = make([]int, 900)
+	request := gorequest.New()
 	for pageNum := 1; pageNum <= 5; pageNum ++ {
-		values.Add("pn", strconv.Itoa(pageNum))
-		resp, err := http.PostForm(positionUrl, *values)
-		if err != nil {
-			logger.Println("GetPositionIds error, ", err)
+		params = params + "&pn=" + strconv.Itoa(pageNum)
+		//resp, err := http.PostForm(positionUrl, *values)
+		resp, _, errs := request.Proxy("http://" + proxy.GetRandomProxy()).Post(positionUrl).Send(params).End()
+		if errs != nil {
+			logger.Println("GetPositionIds error, ", errs)
 			return
 		}
 

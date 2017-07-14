@@ -1,9 +1,9 @@
 package job
 
 import (
-	"github.com/robfig/cron"
-	"GoJobSkills/log"
-	"GoJobSkills/proxy"
+	timer "github.com/robfig/cron"
+	"goJobSkills/log"
+	"goJobSkills/proxy"
 )
 
 
@@ -11,16 +11,16 @@ var logger = log.GetLogger()
 
 
 func Register()  {
-	cron := cron.New()
+	cron := timer.New()
 
-	cron.AddFunc("0 0 * * ? *", ProxyPoolMaintainJob)
+	cron.AddFunc("0 0 0 * ? *", proxyPoolMaintainJob)
 
 	cron.Start()
 }
 
-func ProxyPoolMaintainJob() {
+func proxyPoolMaintainJob() {
 	logger.Println("ProxyPoolMaintainJob started")
 
+	proxy.CheckAvailablity()
 	proxy.FillProxyPool()
 }
-
