@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"regexp"
 	"bytes"
-	"GoJobSkills/website/lagou"
-	"GoJobSkills/proxy"
+	"goJobSkills/website/lagou"
+	"goJobSkills/proxy"
 	"github.com/PuerkitoBio/goquery"
 	"os"
 	"strconv"
@@ -18,6 +18,10 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/parnurzeal/gorequest"
 	"net"
+	"goJobSkills/client"
+	"goJobSkills/website/jianshu"
+	"goJobSkills/boson"
+	"path/filepath"
 )
 
 
@@ -225,14 +229,6 @@ func TestJianShuLink(t *testing.T) {
 	for i := 0; i < len(hrefs); i++ {
 		client.Do("SADD", "go_hrefs", hrefs[i])
 	}
-
-
-
-	//nodes := ul.Nodes
-	//for i := 0; i < len(nodes); i++{
-	//	fmt.Println(nodes[0].FirstChild.Attr[0].Val)
-	//}
-
 }
 
 func TestJianShuContent(t *testing.T) {
@@ -359,20 +355,37 @@ func TestProxySources(t *testing.T) {
 	}
 }
 
-func TestArray(t *testing.T) {
-	args := make([]string, 0)
-	args = append(args, "set_test_key")
-	args = append(args, "1")
-	args = append(args, "2")
-	args = append(args, "3")
+func TestJianshuJob(t *testing.T) {
+	client.Init()
+	jianshu.GetArticleLinks()
 
-	client, err := redis.Dial("tcp", "127.0.0.1:6379")
-	defer client.Close()
+	//dial, err := redis.Dial("tcp", "127.0.0.1:6379")
+	//conn := client.REDIS.Get()
+	//defer conn.Close()
+	//defer dial.Close()
+	//proxy, err := redis.String(dial.Do("SRANDMEMBER", "proxy_pool"))
+	//proxy, err := redis.Int(dial.Do("GET", "test"))
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println(proxy)
+}
 
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+func TestFillProxyPool(t *testing.T) {
+	client.Init()
+	proxy.FillProxyPool()
+}
 
-	client.Do("SADD", args...)
+func TestCheckUnavailable(t *testing.T) {
+	client.Init()
+	proxy.CheckAvailablity()
+}
+
+func TestBoSon(t *testing.T) {
+	boson.GetKeyWords("")
+}
+
+func TestFilePath(t *testing.T) {
+	abs, _ := filepath.Abs("../stopwords")
+	fmt.Println(abs)
 }
