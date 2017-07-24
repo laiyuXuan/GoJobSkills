@@ -22,6 +22,9 @@ import (
 	"goJobSkills/website/jianshu"
 	"goJobSkills/boson"
 	"path/filepath"
+	"github.com/google/uuid"
+	"github.com/yanyiwu/gojieba"
+	"strings"
 )
 
 
@@ -69,7 +72,7 @@ func TestHttpPost(t *testing.T) {
 }
 
 func TestHttpGet(t *testing.T) {
-	resp, err := http.Get("https://www.lagou.com/jobs/2365703.html")
+	resp, err := http.Get("https://www.lagou.com/jobs/3380622.html")
 	if err != nil {
 		fmt.Println("error")
 		fmt.Println(err)
@@ -381,11 +384,51 @@ func TestCheckUnavailable(t *testing.T) {
 	proxy.CheckAvailablity()
 }
 
-func TestBoSon(t *testing.T) {
-	boson.GetKeyWords("")
-}
 
 func TestFilePath(t *testing.T) {
 	abs, _ := filepath.Abs("../stopwords")
 	fmt.Println(abs)
 }
+
+func TestGetLaGouTotalPage(t *testing.T) {
+	client.Init()
+	lagou.GetPositionIds("java")
+}
+
+func TestJD(t *testing.T) {
+	client.Init()
+	lagou.GetJobDescription()
+}
+
+func TestUUID(t *testing.T) {
+	newUUID, _ := uuid.NewUUID()
+	fmt.Println(newUUID)
+}
+
+func TestName(t *testing.T) {
+	client.Init()
+	conn := client.REDIS.Get()
+	defer conn.Close()
+
+	conn.Do("SADD", "position_id_lagou", 123)
+}
+
+func TestOpenFile(t *testing.T) {
+	_, err := os.OpenFile("/Users/Lyons/doc/lagou/job_description", os.O_RDONLY, 0666)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func TestJieBa(t *testing.T) {
+	gojieba.STOP_WORDS_PATH = "/Users/Lyons/doc/stopwords/stopwords";
+	jieba := gojieba.NewJieba()
+	cut := jieba.Cut("任职要求:1.本科及以上学历，计算机相关专业优先。2.3年以上开发经验，具有互联网行业开发经验者优先。3.精通Java开发，熟悉SpringMVC、Spring、Mybatis或Hibernate框架，熟悉HTML，JavaScript，jQuery，熟悉MySQL，了解Redis，熟悉Git或Svn，熟悉IDEA，Maven，Linux优先。4.熟悉软件开发流程，良好的代码编写风格和文档编写能力。5.热爱软件编程，喜欢钻研技术，善于学习新的技术和理念并应用在工作中。", true)
+	fmt.Println(strings.Join(cut, " "))
+}
+
+func TestBoSon(t *testing.T) {
+	boson.GetKeywords("/Users/Lyons/doc/lagou/job_description")
+	//boson.CharacterizeWords("/Users/Lyons/doc/lagou/job_description")
+}
+
