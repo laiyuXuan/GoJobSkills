@@ -25,6 +25,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/yanyiwu/gojieba"
 	"strings"
+	"github.com/op/go-logging"
+	"goJobSkills/log"
 )
 
 
@@ -38,6 +40,8 @@ import (
 //	fmt.Println(file)
 //}
 //
+
+var logger = log.GetLogger()
 func TestRegex(t *testing.T) {
 	totalPageRx := "^(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9]):\\d{0,5}$"
 	compile, _ := regexp.Compile(totalPageRx)
@@ -144,10 +148,10 @@ func TestRx(t *testing.T) {
 	fmt.Println(emptyCompile.ReplaceAllString("1 2 3    4", ""))
 }
 
-func TestPositionId(t *testing.T) {
-	ids := lagou.GetPositionIds("ui")
-	fmt.Println(ids)
-}
+//func TestPositionId(t *testing.T) {
+//	client.Init()
+//	lagou.GetPositionIds("ui")
+//}
 
 func TestProxy(t *testing.T) {
 	client, err := redis.Dial("tcp", "127.0.0.1:6379")
@@ -303,7 +307,9 @@ func TestRedis(t *testing.T) {
 }
 
 func TestTime(t *testing.T) {
-	fmt.Println(time.Now().Unix())
+
+	crr, err := time.Parse("2006-01-02 15:04:05", "2017-07-25 14:30:38")
+	fmt.Println(err, crr)
 }
 
 func getRedis() (client redis.Conn) {
@@ -392,12 +398,12 @@ func TestFilePath(t *testing.T) {
 
 func TestGetLaGouTotalPage(t *testing.T) {
 	client.Init()
-	lagou.GetPositionIds("java")
+	lagou.GetPositionIds("php", "广州", "应届毕业生")
 }
 
 func TestJD(t *testing.T) {
 	client.Init()
-	lagou.GetJobDescription()
+	lagou.GetJobDescription("java")
 }
 
 func TestUUID(t *testing.T) {
@@ -430,5 +436,21 @@ func TestJieBa(t *testing.T) {
 func TestBoSon(t *testing.T) {
 	boson.GetKeywords("/Users/Lyons/doc/lagou/job_description")
 	//boson.CharacterizeWords("/Users/Lyons/doc/lagou/job_description")
+}
+
+func TestGlog(t *testing.T) {
+	//glog.Info("info")
+	//glog.Warning("warning")
+	//glog.Error("error")
+	//glog.Fatal("fatal")
+	logger1 := logging.MustGetLogger("testGlog")
+	logger1.Info("info")
+	//logger.Debug("debug")
+	//logger.Warning("warning")
+	//logger.Error("err")
+	//logger.Panic("panic")
+	//logger.Fatal("fatal")
+	logger.Println("test")
+
 }
 

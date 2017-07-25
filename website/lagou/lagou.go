@@ -1,7 +1,6 @@
 package lagou
 
 import (
-	"github.com/hu17889/go_spider/core/common/page"
 	"regexp"
 	"strconv"
 	"encoding/json"
@@ -17,16 +16,19 @@ import (
 )
 
 const (
-	totalPageRx       = "[page=\"*\" class=\"pager_not_current\"]"
-	positionUrl       = "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
-	MAX_PAGE_INDEX    = 35
-	MAX_POST_DURATION = time.Hour * 24 * 7
-	INTERVAL          = time.Second * 20
-	TIME_FORMAT       = "yyyy-MM-dd HH:mm:ss"
-	JD_FILE_PATH	  = "/Users/lyons/doc/lagou/"
+	totalPageRx       		= "[page=\"*\" class=\"pager_not_current\"]"
+
+	MAX_PAGE_INDEX    		= 1
+	MAX_POST_DURATION 		= time.Hour * 24 * 7
+	INTERVAL          		= time.Second * 20
+	TIME_FORMAT       		= "2006-01-02 15:04:05"
+	JD_FILE_PATH	  		= "/Users/lyons/doc/lagou/"
+
+	KEY_POSITION_ID_PREFIX 	= "position_id_lagou_"
 )
 
 var logger = log.GetLogger()
+var KEY_DATE_POSTFIX = "@" + time.Now().Format("2006-01-02")
 
 //type LaGouPageProcessor struct {
 //
@@ -60,7 +62,17 @@ func getTotalPage(body string) int  {
 	return atoi;
 }
 
-func GetPositionIds(keyword string) {
+func GetPositionIds(keyword, city, workYear string) {
+
+	positionUrl := "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
+
+	if workYear != "" {
+		positionUrl += "&gj=" + workYear
+	}
+
+	if city != "" {
+		positionUrl += "&city=" + city
+	}
 
 	conn := client.REDIS.Get()
 	defer conn.Close()
@@ -102,7 +114,7 @@ func GetPositionIds(keyword string) {
 		logger.Printf("the %d loop result: %d", pageNum, positionIds)
 
 		for _, id := range positionIds {
-			conn.Do("SADD", "position_id_lagou", id)
+			conn.Do("SADD", KEY_POSITION_ID_PREFIX + keyword + KEY_DATE_POSTFIX, id)
 		}
 
 		createTime, err := time.Parse(TIME_FORMAT, positionInfos[len(positionInfos)-1].CreateTime)
@@ -117,13 +129,14 @@ func GetPositionIds(keyword string) {
 
 		time.Sleep(INTERVAL)
 	}
+	logger.Println("ALL DONE!")
 }
 
-func GetJobDescription() {
+func GetJobDescription(keyword string) {
 	conn := client.REDIS.Get()
 	defer conn.Close()
 
-	positionIds, err := redis.Strings(conn.Do("SMEMBERS", "position_id_lagou"))
+	positionIds, err := redis.Strings(conn.Do("SMEMBERS", KEY_POSITION_ID_PREFIX + keyword + KEY_DATE_POSTFIX))
 	if err != nil {
 		logger.Panic(err)
 	}
@@ -136,7 +149,7 @@ func GetJobDescription() {
 			Proxy(proxy.GetRandomProxy(conn)).
 			Set("REQUEST_ID", newUUID.String()).
 			Set("Origin","https://www.lagou.com").
-			Set("Referer","https://www.lagou.com/jobs/list_Java?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
+			Set("Referer","https://www.lagou.com/jobs/list_" + keyword + "?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
 			Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36").
 			Set("X-Forwarded-For", proxy.GetRandomIP(conn)).
 			Get("https://www.lagou.com/jobs/" + id + ".html").
@@ -161,7 +174,7 @@ func GetJobDescription() {
 			limits ++
 		}
 
-		err = utils.Save2File(JD_FILE_PATH + "job_description_" + time.Now().Format("yyyy-MM-dd"), matched)
+		err = utils.Save2File(JD_FILE_PATH + "job_description_" + time.Now().Format("2006-01-02"), matched)
 		if err != nil {
 			logger.Panic(err)
 		}
