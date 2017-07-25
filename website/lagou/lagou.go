@@ -10,34 +10,37 @@ import (
 	"goJobSkills/client"
 	"github.com/garyburd/redigo/redis"
 	"time"
-	"strings"
 	"github.com/google/uuid"
 	"bytes"
-	"os"
+	"goJobSkills/utils"
+	"goJobSkills/proxy"
 )
 
 const (
-	totalPageRx = "[page=\"*\" class=\"pager_not_current\"]"
-	positionUrl = "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
+	totalPageRx       = "[page=\"*\" class=\"pager_not_current\"]"
+	positionUrl       = "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
+	MAX_PAGE_INDEX    = 35
+	MAX_POST_DURATION = time.Hour * 24 * 7
+	INTERVAL          = time.Second * 20
+	TIME_FORMAT       = "yyyy-MM-dd HH:mm:ss"
+	JD_FILE_PATH	  = "/Users/lyons/doc/lagou/"
 )
 
 var logger = log.GetLogger()
 
-
-
-type LaGouPageProcessor struct {
-
-}
-
-func (processor *LaGouPageProcessor) Process(p *page.Page) {
-	body := p.GetBodyStr()
-	totalPage := getTotalPage(body)
-	logger.Println("total page num is ", totalPage)
-}
-
-func (processor *LaGouPageProcessor) Finish()  {
-
-}
+//type LaGouPageProcessor struct {
+//
+//}
+//
+//func (processor *LaGouPageProcessor) Process(p *page.Page) {
+//	body := p.GetBodyStr()
+//	totalPage := getTotalPage(body)
+//	logger.Println("total page num is ", totalPage)
+//}
+//
+//func (processor *LaGouPageProcessor) Finish()  {
+//
+//}
 
 /**
 get total page
@@ -57,7 +60,7 @@ func getTotalPage(body string) int  {
 	return atoi;
 }
 
-func GetPositionIds(keyword string) (positionIds []int) {
+func GetPositionIds(keyword string) {
 
 	conn := client.REDIS.Get()
 	defer conn.Close()
@@ -65,49 +68,55 @@ func GetPositionIds(keyword string) (positionIds []int) {
 	params := "kd=" + keyword
 	request := gorequest.New()
 
-	for pageNum := 1; pageNum <= 100; pageNum ++ {
+	for pageNum := 1; pageNum <= MAX_PAGE_INDEX; pageNum ++ {
 			params = params + "&pn=" + strconv.Itoa(pageNum)
 		newUUID, _ := uuid.NewUUID()
-
 		_, body, errs := request.
-			Proxy(getRandomProxy(conn)).
+			Proxy(proxy.GetRandomProxy(conn)).
 			Post(positionUrl).
 			Set("REQUEST_ID", newUUID.String()).
 			Set("Origin","https://www.lagou.com").
-			Set("Referer","https://www.lagou.com/jobs/list_Java?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
+			Set("Referer","https://www.lagou.com/jobs/list_" + keyword + "?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
 			Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36").
-			Set("X-Forwarded-For", getRandomIP(conn)).
+			Set("X-Forwarded-For", proxy.GetRandomIP(conn)).
 			Send(params).
 			End()
 		if errs != nil {
 			logger.Println("GetPositionIds error, ", errs)
-			return
+			continue
 		}
 
 		logger.Println("resulet body -->>, " + body)
 		positionResponse := &PositionResponse{}
 		err := json.Unmarshal([]byte(body), positionResponse)
-
 		if err != nil {
 			logger.Println("ioutil.ReadAll error, ", err)
-			return
+			continue
 		}
 
-		subPositionIds := make([]int, 0)
+		positionIds := make([]int, 0)
 		positionInfos := positionResponse.Content.PositionResult.Result
-		for i := 0; i < len(positionInfos)-1; i++ {
-			subPositionIds = append(subPositionIds, positionInfos[i].PositionId)
+		for i := 0; i < len(positionInfos) - 1; i++ {
+			positionIds = append(positionIds, positionInfos[i].PositionId)
 		}
-		logger.Printf("the %d loop result: %d", pageNum, subPositionIds)
+		logger.Printf("the %d loop result: %d", pageNum, positionIds)
 
-		for _, id := range subPositionIds {
+		for _, id := range positionIds {
 			conn.Do("SADD", "position_id_lagou", id)
 		}
 
-		time.Sleep(time.Second * 20)
-	}
+		createTime, err := time.Parse(TIME_FORMAT, positionInfos[len(positionInfos)-1].CreateTime)
+		if err != nil {
+			logger.Println(err)
+		}
 
-	return
+		if createTime.Add(MAX_POST_DURATION).Before(time.Now()) {
+			logger.Println("reach the post of one week ago, abort...")
+			break
+		}
+
+		time.Sleep(INTERVAL)
+	}
 }
 
 func GetJobDescription() {
@@ -117,86 +126,62 @@ func GetJobDescription() {
 	positionIds, err := redis.Strings(conn.Do("SMEMBERS", "position_id_lagou"))
 	if err != nil {
 		logger.Panic(err)
-		return
 	}
-	//positionIds := make([]string, 0)
-	//positionIds = append(positionIds, "3159109")
+	limits := 0
 	for _, id := range positionIds {
 		logger.Println("position id: " + id)
 		newUUID, _ := uuid.NewUUID()
 		resp, body, errs := gorequest.
 			New().
-			Proxy(getRandomProxy(conn)).
+			Proxy(proxy.GetRandomProxy(conn)).
 			Set("REQUEST_ID", newUUID.String()).
 			Set("Origin","https://www.lagou.com").
 			Set("Referer","https://www.lagou.com/jobs/list_Java?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
 			Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36").
-			Set("X-Forwarded-For", getRandomIP(conn)).
+			Set("X-Forwarded-For", proxy.GetRandomIP(conn)).
 			Get("https://www.lagou.com/jobs/" + id + ".html").
 			End()
 		if errs != nil {
-			logger.Panic(errs)
+			logger.Println(errs)
 			continue
 		}
 
-		emptyRx := "\\s+"
-		emptyCompile := regexp.MustCompile(emptyRx)
-		body = emptyCompile.ReplaceAllString(body, "")
+		body = utils.RemoveBlanks(body)
 
-		buffer := &bytes.Buffer{}
-
-		head := "<h3class=\"description\">"
-		tail := "</div>"
-		buffer.WriteString(head)
-		buffer.WriteString("(.*?)")
-		buffer.WriteString(tail)
-
-		requirementRx := buffer.String()
+		requirementRx := getJDRegex()
 		compile := regexp.MustCompile(requirementRx)
 		matched := compile.FindString(body)
 
-		//multiHtml := "<p><br></p>"
-		////multiHtml := "<p>&nbsp;</p>"
-		//multiHtmlsCompile := regexp.MustCompile(multiHtml)
-		//split := multiHtmlsCompile.Split(matched, -1)
-		//
-		//fmt.Println(len(split))
-		//fmt.Println(split[1])
+		matched = utils.RemoveHtmlTag(matched)
+		matched = utils.RemoveSpace(matched)
 
-		htmlLabelRx := "<.+?>"
-		htmlCompile := regexp.MustCompile(htmlLabelRx)
-		matched = htmlCompile.ReplaceAllString(matched, "")
+		logger.Println(resp.Status + " " + matched)
 
-		//matched = strings.Replace(matched, head, "", -1)
-		//matched = strings.Replace(matched, tail, "", -1)
+		if matched == "" {
+			limits ++
+		}
 
-		htmlSpaceRx := "&nbsp"
-		htmlSpaceComplie := regexp.MustCompile(htmlSpaceRx)
-		matched = htmlSpaceComplie.ReplaceAllString(matched, "")
+		err = utils.Save2File(JD_FILE_PATH + "job_description_" + time.Now().Format("yyyy-MM-dd"), matched)
+		if err != nil {
+			logger.Panic(err)
+		}
 
-		matched += "/n"
-		logger.Println(strconv.Itoa(resp.StatusCode) + matched)
-
-
-		save2File("job_description", matched)
-		time.Sleep(time.Second * 20)
+		time.Sleep(time.Second * 10)
 	}
+	logger.Printf("ALL DONE! failed %d times", limits)
 }
 
-func getRandomProxy(conn redis.Conn) (string) {
-	proxy, err := redis.String(conn.Do("SRANDMEMBER", "proxy_pool"))
-	if err != nil {
-		logger.Panic(err)
-	}
-	logger.Println("using proxy -->>" + proxy)
-	return proxy
+func getJDRegex() string {
+	buffer := &bytes.Buffer{}
+	head := "<h3class=\"description\">"
+	tail := "</div>"
+	buffer.WriteString(head)
+	buffer.WriteString("(.*?)")
+	buffer.WriteString(tail)
+	requirementRx := buffer.String()
+	return requirementRx
 }
 
-func getRandomIP(conn redis.Conn) string {
-	proxy := getRandomProxy(conn)
-	split := strings.Split(proxy, ":")
-	return split[0]
-}
 
 
 	type PositionResponse struct {
@@ -263,20 +248,3 @@ func getRandomIP(conn redis.Conn) string {
 		SecondType string
 		WorkYear string
 	}
-
-func save2File(fileName string, content string)  {
-	path := "/Users/lyons/doc/lagou/"
-	file, err := os.OpenFile(path + fileName, os.O_APPEND | os.O_WRONLY | os.O_CREATE, 0666)
-	defer file.Close()
-
-	if err != nil{
-		logger.Println(file, err)
-		return
-	}
-	_, err = file.WriteString(content)
-	if err != nil {
-		logger.Println("append to file failed", err)
-		return
-	}
-
-}

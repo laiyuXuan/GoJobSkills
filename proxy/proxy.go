@@ -10,17 +10,11 @@ import (
 	"regexp"
 	"strconv"
 	"goJobSkills/client"
+	"strings"
 )
 
 var logger = log.GetLogger()
 var ipRx = "^(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9]):\\d{0,5}$"
-
-func GetRandomProxy() (ip string) {
-	result := Data5u()
-	ip = result[rand.Intn(10)].Data
-	logger.Println("a random proxy is generated: ", ip)
-	return
-}
 
 func CheckIP(ip *model.IP) bool {
 	pollURL := "http://httpbin.org/get"
@@ -103,4 +97,20 @@ func CheckAvailablity() {
 	for _, un := range unavailables {
 		conn.Do("SREM", "proxy_pool", un)
 	}
+}
+
+
+func GetRandomProxy(conn redis.Conn) (string) {
+	proxy, err := redis.String(conn.Do("SRANDMEMBER", "proxy_pool"))
+	if err != nil {
+		logger.Panic(err)
+	}
+	logger.Println("using proxy -->>" + proxy)
+	return proxy
+}
+
+func GetRandomIP(conn redis.Conn) string {
+	proxy := GetRandomProxy(conn)
+	split := strings.Split(proxy, ":")
+	return split[0]
 }
