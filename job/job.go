@@ -4,6 +4,7 @@ import (
 	timer "github.com/robfig/cron"
 	"goJobSkills/log"
 	"goJobSkills/proxy"
+	"github.com/golang/glog"
 )
 
 
@@ -15,12 +16,20 @@ func Register()  {
 
 	cron.AddFunc("0 0 0 * ? *", proxyPoolMaintainJob)
 
+	cron.AddFunc("0 0 11 ? * 7", lagouJDcrawlerJob)
+
 	cron.Start()
 }
 
 func proxyPoolMaintainJob() {
-	logger.Println("ProxyPoolMaintainJob started")
+	logger.Println("ProxyPoolMaintainJob starts")
 
 	proxy.CheckAvailablity()
 	proxy.FillProxyPool()
+}
+
+func lagouJDcrawlerJob()  {
+	logger.Println("lagouJDcrawlerJob starts")
+
+
 }

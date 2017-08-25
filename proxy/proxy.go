@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"goJobSkills/log"
-	"math/rand"
 	"github.com/parnurzeal/gorequest"
 	"goJobSkills/model"
 	"time"
@@ -18,7 +17,18 @@ var ipRx = "^(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\\.(25
 
 func CheckIP(ip *model.IP) bool {
 	pollURL := "http://httpbin.org/get"
-	resp, _, errs := gorequest.New().Proxy(ip.Data).Get(pollURL).Timeout(time.Second * 20).End()
+	var httpType string
+	if strings.Contains(ip.Type, "https") {
+		httpType = "https"
+	} else {
+		httpType = "http"
+	}
+	proxyUrl := httpType + "://" + ip.Data
+	resp, _, errs := gorequest.New().Proxy(proxyUrl).Get(pollURL).Timeout(time.Second * 10).End()
+	if resp == nil {
+		logger.Println(proxyUrl + " no response")
+		return false
+	}
 	logger.Println("proxy" + ip.Data + "checked, result" + strconv.Itoa(resp.StatusCode))
 	if errs != nil {
 		logger.Println(errs)
@@ -39,7 +49,6 @@ func FillProxyPool() {
 
 	results := getAllProxies()
 	logger.Printf("%d proxies obtained", len(results))
-
 	ips := make([]string, 0)
 	for _, result := range results {
 		if !compile.MatchString(result.Data){
@@ -48,7 +57,15 @@ func FillProxyPool() {
 		if !CheckIP(result){
 			continue
 		}
-		ips = append(ips, result.Data)
+		var httpType string
+		if strings.Contains(result.Type, "https") {
+			httpType = "https"
+		} else {
+			httpType = "http"
+		}
+		proxyUrl := httpType + "://" + result.Data
+		logger.Println(proxyUrl  + " is valid")
+		ips = append(ips, proxyUrl)
 	}
 	logger.Printf("%d proxies are valid, saving to redis", len(ips))
 
@@ -63,10 +80,10 @@ func FillProxyPool() {
 }
 
 func getAllProxies()  (results []*model.IP){
-	results = append(results, Data5u()...)
-	results = append(results, GBJ()...)
+	//results = append(results, Data5u()...)
+	//results = append(results, GBJ()...)
 	results = append(results, Xici()...)
-	results = append(results, XDL()...)
+	//results = append(results, XDL()...)
 
 	return
 }

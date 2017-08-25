@@ -18,7 +18,7 @@ import (
 const (
 	totalPageRx       		= "[page=\"*\" class=\"pager_not_current\"]"
 
-	MAX_PAGE_INDEX    		= 1
+	MAX_PAGE_INDEX    		= 35
 	MAX_POST_DURATION 		= time.Hour * 24 * 7
 	INTERVAL          		= time.Second * 20
 	TIME_FORMAT       		= "2006-01-02 15:04:05"
@@ -63,32 +63,21 @@ func getTotalPage(body string) int  {
 }
 
 func GetPositionIds(keyword, city, workYear string) {
-
-	positionUrl := "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
-
-	if workYear != "" {
-		positionUrl += "&gj=" + workYear
-	}
-
-	if city != "" {
-		positionUrl += "&city=" + city
-	}
-
 	conn := client.REDIS.Get()
 	defer conn.Close()
 
 	params := "kd=" + keyword
 	request := gorequest.New()
-
+	positionUrl := getPositionUrl(workYear, city)
 	for pageNum := 1; pageNum <= MAX_PAGE_INDEX; pageNum ++ {
-			params = params + "&pn=" + strconv.Itoa(pageNum)
+		params = params + "&pn=" + strconv.Itoa(pageNum)
 		newUUID, _ := uuid.NewUUID()
 		_, body, errs := request.
-			Proxy(proxy.GetRandomProxy(conn)).
+		Proxy(proxy.GetRandomProxy(conn)).
 			Post(positionUrl).
 			Set("REQUEST_ID", newUUID.String()).
-			Set("Origin","https://www.lagou.com").
-			Set("Referer","https://www.lagou.com/jobs/list_" + keyword + "?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
+			Set("Origin", "https://www.lagou.com").
+			Set("Referer", "https://www.lagou.com/jobs/list_"+keyword+"?city=%E5%8C%97%E4%BA%AC&cl=false&fromSearch=true&labelWords=&suginput=").
 			Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36").
 			Set("X-Forwarded-For", proxy.GetRandomIP(conn)).
 			Send(params).
@@ -108,13 +97,13 @@ func GetPositionIds(keyword, city, workYear string) {
 
 		positionIds := make([]int, 0)
 		positionInfos := positionResponse.Content.PositionResult.Result
-		for i := 0; i < len(positionInfos) - 1; i++ {
+		for i := 0; i < len(positionInfos)-1; i++ {
 			positionIds = append(positionIds, positionInfos[i].PositionId)
 		}
 		logger.Printf("the %d loop result: %d", pageNum, positionIds)
 
 		for _, id := range positionIds {
-			conn.Do("SADD", KEY_POSITION_ID_PREFIX + keyword + KEY_DATE_POSTFIX, id)
+			conn.Do("SADD", KEY_POSITION_ID_PREFIX+keyword+KEY_DATE_POSTFIX, id)
 		}
 
 		createTime, err := time.Parse(TIME_FORMAT, positionInfos[len(positionInfos)-1].CreateTime)
@@ -130,6 +119,16 @@ func GetPositionIds(keyword, city, workYear string) {
 		time.Sleep(INTERVAL)
 	}
 	logger.Println("ALL DONE!")
+}
+func getPositionUrl(workYear string, city string) string {
+	positionUrl := "https://www.lagou.com/jobs/positionAjax.json?px=default&needAddtionalResult=false"
+	if workYear != "" {
+		positionUrl += "&gj=" + workYear
+	}
+	if city != "" {
+		positionUrl += "&city=" + city
+	}
+	return positionUrl
 }
 
 func GetJobDescription(keyword string) {
@@ -174,7 +173,7 @@ func GetJobDescription(keyword string) {
 			limits ++
 		}
 
-		err = utils.Save2File(JD_FILE_PATH + "job_description_" + time.Now().Format("2006-01-02"), matched)
+		err = utils.Save2File(JD_FILE_PATH + "job_description_" + keyword + time.Now().Format("2006-01-02"), matched)
 		if err != nil {
 			logger.Panic(err)
 		}

@@ -27,6 +27,12 @@ import (
 	"strings"
 	"github.com/op/go-logging"
 	"goJobSkills/log"
+	"goJobSkills/word2vec"
+	"math"
+	"goJobSkills/baidu"
+	"sort"
+	"goJobSkills/utils"
+	"goJobSkills/website/iteye"
 )
 
 
@@ -403,7 +409,7 @@ func TestGetLaGouTotalPage(t *testing.T) {
 
 func TestJD(t *testing.T) {
 	client.Init()
-	lagou.GetJobDescription("java")
+	lagou.GetJobDescription("php")
 }
 
 func TestUUID(t *testing.T) {
@@ -434,7 +440,7 @@ func TestJieBa(t *testing.T) {
 }
 
 func TestBoSon(t *testing.T) {
-	boson.GetKeywords("/Users/Lyons/doc/lagou/job_description")
+	boson.GetKeywords("/Users/Lyons/doc/lagou/job_description_python2017-07-25")
 	//boson.CharacterizeWords("/Users/Lyons/doc/lagou/job_description")
 }
 
@@ -454,3 +460,176 @@ func TestGlog(t *testing.T) {
 
 }
 
+func TestAll(t *testing.T) {
+	client.Init()
+	lagou.GetPositionIds("python", "全国", "")
+	lagou.GetJobDescription("python")
+}
+
+func TestGetBaiduToken(t *testing.T) {
+	word2vec.GetBaiduToken();
+}
+
+func TestBaiduGetVec(t *testing.T) {
+	fmt.Println(word2vec.GetVec("张飞"))
+}
+
+func TestMath(t *testing.T) {
+	fmt.Println(math.Pow(1.0 - 3.0, 2) + math.Pow(3.0 - 5.0, 2))
+	fmt.Println(math.Sqrt(4.0))
+}
+
+func TestCalcVecDiff(t *testing.T) {
+	fmt.Println(word2vec.CalcVecDiff(word2vec.GetVec("java"), word2vec.GetVec("uncle")))
+}
+
+func TestWord2Vec(t *testing.T) {
+	word := "java"
+	vectorMap := word2vec.LoadModel("/Users/lyons/Downloads/glove.6B/glove.6B.300d.txt")
+	jVec := vectorMap[word]
+	logger.Println(len(vectorMap))
+	logger.Printf( "%s vector: %f",word,  jVec)
+	mysqlVec := vectorMap["mysql"]
+	hairVec := vectorMap["hair"]
+	logger.Printf( "mysql vector: %f",  mysqlVec)
+	logger.Printf( "hair vector: %f",  hairVec)
+	logger.Println(word2vec.CalcVecDiff(jVec, mysqlVec))
+	logger.Println(word2vec.CalcVecDiff(jVec, hairVec))
+
+	//distances := make(word2vec.Distances, 0)
+	//for k, v := range vectors {
+	//	distance := &word2vec.WordDistance{"java", k, word2vec.CalcVecDistance(jVec, v)}
+	//	distances = append(distances, *distance)
+	// 	//fmt.Printf("distance of %s: %f", k, word2vec.CalcVecDistance(jVec, v))
+	//}
+	//sort.Sort(distances)
+	//for _, wd := range distances {
+	// 	logger.Printf("distance of %s: %f", wd.WordB, wd.Distance)
+	//}
+
+}
+
+func TestBaiduTranslate(t *testing.T) {
+	fmt.Println(baidu.Zh2En("数据库,架构,开源,并发,测试,线程,缓存,性能,数据,质量,金融,解决方案,保证系统,积极主动,一年,两年,部署,福利,很强,资格,重构,功能,协作,一定,流程,知识,软件产品,产品开发,平台,能够,深入,过程,全日制,意识,行业,详细,快速,习惯,语句,机制,员工,经验者,结构,任务,程序"))
+	//fmt.Println(baidu.convertUnicode2Zh("\u82f9\u679c"))
+}
+
+func TestFull(t *testing.T) {
+	wordWeights := boson.GetKeywords("/Users/Lyons/doc/lagou/job_description_python2017-07-25")
+	tooLight := make([]string, 0)
+	for _, ww := range wordWeights {
+	 	if ww.Weight < boson.THEARDHOLD && utils.IsChineseChar(ww.Word){
+			tooLight = append(tooLight, ww.Word)
+		}
+	}
+	tooLightMap := make(map[string]string)
+	for _, tt := range tooLight {
+	 	tooLightMap[baidu.Zh2En(tt)] = tt
+	}
+	tooLightEn := make([]string, 0)
+	for k, _ := range tooLightMap {
+		tooLightEn = append(tooLightEn, k)
+	}
+	logger.Println("tooLightEn -> ", tooLightEn)
+	getDistance("python", tooLightEn, tooLightMap)
+}
+
+func getDistance(fromWord string, toWords []string, toWordMap map[string]string) {
+	vectorMap := word2vec.LoadModel("/Users/lyons/word2vec/pre-trained-models/GoogleNews-vectors-negative300.txt")
+
+	fromVec := vectorMap[fromWord]
+	logger.Printf("from vec is %s\n", fromVec)
+	distances := make(word2vec.Distances, 0)
+	//for k, v := range vectorMap {
+	//	if v == nil || len(v) == 0{
+	//		logger.Printf("no vector for %s", k)
+	//		continue
+	//	}
+	//	logger.Printf("comparing %s, whose vector length is %d\n", k, len(v))
+	//	distance := &word2vec.WordDistance{fromWord, k, word2vec.CalcVecDiff(fromVec, )}
+	//	distances = append(distances, *distance)
+	//	//fmt.Printf("distance of %s: %f", k, word2vec.CalcVecDistance(fromVec, v))
+	//}
+	for _, word := range toWords {
+		replace := strings.Replace(strings.TrimSpace(word), " ", "_", -1)
+		toVec := vectorMap[strings.ToLower(replace)]
+		if toVec == nil || len(toVec) == 0 {
+			logger.Printf("%s not found\n", replace)
+			continue
+		}
+		dist := word2vec.CalcVecDiff(fromVec, toVec)
+		distance := &word2vec.WordDistance{fromWord, word, dist}
+		distances = append(distances, *distance)
+		fmt.Printf("distance of %s: %f\n", word, dist)
+	}
+	sort.Sort(distances)
+	for _, wd := range distances {
+		logger.Printf("distance of %s: %f", toWordMap[wd.WordB], wd.Distance)
+	}
+}
+
+func TestLoad(t *testing.T) {
+	word2vec.LoadModel("/Users/lyons/Downloads/glove.6B/glove.6B.300d.txt")
+}
+
+func TestIteye(t *testing.T) {
+	client.Init()
+	iteye.CrawNews()
+}
+
+func TestIP(t *testing.T) {
+	client.Init()
+	conn := client.REDIS.Get()
+	defer  conn.Close()
+	//
+	_, body, err := gorequest.New().Proxy("http://203.198.193.3:808").Get("http://1212.ip138.com/ic.asp").End()
+
+	if err != nil {
+		contains := strings.Contains(err[0].Error(), "proxyconnect")
+		fmt.Println(contains)
+		fmt.Println(err[0].Error())
+	}
+
+	//doc, _ := goquery.NewDocumentFromResponse(resp)
+
+	//fmt.Println(doc.Find(".col-md-12").Text())
+
+	fmt.Println(body)
+
+	//p := func(_ *http.Request) (*url.URL, error) {
+	//	return url.Parse("https://183.151.40.21:808")//根据定义Proxy func(*Request) (*url.URL, error)这里要返回url.URL
+	//}
+
+	//proxyUrl, err := url.Parse("http://45.76.154.255:8080")
+	//myClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+
+
+
+	//resp, err := myClient.Get("http://1212.ip138.com/ic.asp")
+
+	//transport := &http.Transport{Proxy: p}
+	//client1 := &http.Client{Transport: transport}
+	//resp, err := client1.Get("http://1212.ip138.com/ic.asp") //请求并获取到对象,使用代理
+	//if err != nil {
+	//	fmt.Println(err)
+	//	panic(err)
+	//}
+	//all, _ := ioutil.ReadAll(resp.Body)
+	//
+	//fmt.Println(string(all))
+}
+
+func TestStr(t *testing.T) {
+	str := "://"
+	fmt.Println(str)
+}
+
+func TestFreeProxyList(t *testing.T) {
+	client.Init()
+	fmt.Println(proxy.GetFreeProxy("Hong"))
+}
+
+func TestFindRateLimit(t *testing.T) {
+	client.Init()
+	iteye.FindRateLimit()
+}

@@ -9,7 +9,7 @@ import (
 func GetLogger() *log.Logger{
 	var buffer bytes.Buffer
 	buffer.WriteString("[")
-	buffer.WriteString("LOG")
+	buffer.WriteString("APP LOG")
 	buffer.WriteString("] --->> ")
 	return log.New(os.Stdout, buffer.String(), log.LstdFlags | log.Llongfile)
 }

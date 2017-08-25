@@ -37,6 +37,7 @@ func Data5u() (results []*model.IP) {
 		ip.Data = ss + ":" + sss
 		ip.Type = ssss
 		results = append(results, ip)
+		log.Println(ip.Type + ip.Data)
 	})
 	log.Println("Data5u done.")
 
